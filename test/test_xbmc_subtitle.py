@@ -144,7 +144,6 @@ class TestXBMCSubtitleProviderWithCredentials(TestXBMCSubtitleProvider):
         self.provider.settings_provider.setSetting(self.password_setting_key, self.password)
         TestXBMCSubtitleProvider.test_download(self)
 
-
 from seekers.xbmc_subtitles import TitulkyComSeeker
 class TestTitulkycom(TestXBMCSubtitleProviderWithCredentials, unittest.TestCase):
     @classmethod
@@ -321,6 +320,34 @@ class TestTitlovi(TestXBMCSubtitleProvider, unittest.TestCase):
         self.download_movie_list = [('The Hobbit','2012')]
         self.download_tvshow_list = []
         self.provider= TitloviSeeker(self.tmp_path,
+                                                                        self.download_path,
+                                                                        self.settings,
+                                                                        None,
+                                                                        self.captcha_cb,
+                                                                        self.delay_cb,
+                                                                        self.message_cb)
+
+from seekers.xbmc_subtitles import PremiumTitulkyComSeeker
+class TestPremiumTitulkycom(TestXBMCSubtitleProviderWithCredentials, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestPremiumTitulkycom,cls).setUpClass()
+        cls.login, cls.password = cls.get_credentials('premiumtitulkycom.cfg')
+
+    def setUp(self):
+        self.settings = {
+            'Titulkyuser': self.login, 
+            'Titulkypass': self.password  
+        }
+        self.search_list = []
+        self.tvshow_list = []
+        self.movie_list = []
+        self.hash_list = []
+        self.download_movie_list = [('Alias', '2001')]
+        self.download_tvshow_list = [('Frasier','1','1')]
+        self.login_setting_key = 'Titulkyuser'
+        self.password_setting_key = 'Titulkypass'
+        self.provider= PremiumTitulkyComSeeker(self.tmp_path,
                                                                         self.download_path,
                                                                         self.settings,
                                                                         None,

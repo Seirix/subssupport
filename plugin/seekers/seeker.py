@@ -137,6 +137,10 @@ class BaseSeeker(object):
             self.log.error("search error occured: %s" % str(e))
             e.provider = self.id
             raise e
+        except SubtitlesDownloadError as e:
+            self.log.error("download search error occured: %s" % str(e))
+            e.provider = self.id
+            raise e
         except Exception as e:
             self.log.error("unknown search error occured: %s" % str(e))
             err = SubtitlesSearchError(SubtitlesErrors.UNKNOWN_ERROR, str(e))

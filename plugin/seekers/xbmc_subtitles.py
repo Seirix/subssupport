@@ -109,6 +109,21 @@ class XBMCSubtitlesAdapter(BaseSeeker):
             pass
 
 try:
+    from PremiumTitulky import premiumtitulkycom
+except ImportError as e:
+    premiumtitulkycom = e
+
+class PremiumTitulkyComSeeker(XBMCSubtitlesAdapter):
+    module = premiumtitulkycom
+    if isinstance(module, Exception):
+        error, module = module, None
+    id = 'premium.titulky.com'
+    provider_name = 'Premium.Titulky.com'
+    supported_langs = ['sk', 'cs']
+    default_settings = {'Titulkyuser':{'label':_("Username"), 'type':'text', 'default':"", 'pos':0},
+                                       'Titulkypass':{'label':_("Password"), 'type':'password', 'default':"", 'pos':1}, }
+
+try:
     from Titulky import titulkycom
 except ImportError as e:
     titulkycom = e

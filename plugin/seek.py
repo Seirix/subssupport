@@ -27,7 +27,7 @@ import zipfile
 from seekers import SubtitlesDownloadError, SubtitlesSearchError, \
     SubtitlesErrors, TitulkyComSeeker, EdnaSeeker, SerialZoneSeeker, \
     OpenSubtitlesSeeker, PodnapisiSeeker, SubsceneSeeker, SubtitlesGRSeeker, \
-    ItasaSeeker, TitloviSeeker
+    ItasaSeeker, TitloviSeeker, PremiumTitulkyComSeeker
 from seekers.seeker import BaseSeeker
 from seekers.utilities import languageTranslate, langToCountry, \
     getCompressedFileType, detectSearchParams
@@ -37,6 +37,7 @@ from utils import SimpleLogger, toString
 
 SUBTITLES_SEEKERS = []
 SUBTITLES_SEEKERS.append(TitulkyComSeeker)
+SUBTITLES_SEEKERS.append(PremiumTitulkyComSeeker)
 SUBTITLES_SEEKERS.append(EdnaSeeker)
 SUBTITLES_SEEKERS.append(SerialZoneSeeker)
 SUBTITLES_SEEKERS.append(OpenSubtitlesSeeker)

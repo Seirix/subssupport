@@ -4,6 +4,7 @@ import time
 import urllib2
 import unittest
 import shutil
+import ConfigParser
 
 test = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join (test, '..', 'plugin'))
@@ -37,6 +38,21 @@ def choosefile_cb(files):
     print '[choosefile_cb] selecting [0] - %s' % (os.path.basename(files[0]))
     return files[0]
 
+def get_credentials(filename):
+    config = ConfigParser.RawConfigParser()
+    cfgpath = os.path.join(os.path.dirname(__file__),filename)
+    try:
+        config.read(cfgpath)
+        config.get('Credentials','username')
+    except:
+        print 'Cannot read config file '+ filename
+        config.add_section('Credentials')
+        config.set('Credentials', 'username', 'name_')
+        config.set('Credentials', 'password', 'pass_')
+        with open(cfgpath, 'wb') as configfile:
+            config.write(configfile)
+        print 'Wrote default values to config file'
+    return config.get('Credentials','username'), config.get('Credentials','password')
 
 class TimeoutSeeker(BaseSeeker):
     id = 'timeout'
@@ -264,7 +280,11 @@ class TestSeeker(unittest.TestCase):
 
     def setUp(self):
         download_path = tmp_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'subtmp')
-        settings = {'Titulky.com':{'Titulkypass':'', 'Titulkyuser':''}}
+        premium_titulky_login, premium_titulky_password = get_credentials('premiumtitulkycom.cfg')
+        settings = {
+            'premium.titulky.com': {'Titulkyuser': premium_titulky_login, 'Titulkypass': premium_titulky_password},
+            'titulky.com': {'Titulkyuser': '', 'Titulkypass': ''},
+        }
         self.seeker = SubsSeeker(download_path, tmp_path, captcha_cb, delay_cb, message_cb, settings=settings, debug=True)
 
     def test_get_tvshow_providers(self):
@@ -282,6 +302,12 @@ class TestSeeker(unittest.TestCase):
         self.assertIsNotNone(subtitles)
         self.assertTrue('titulky.com' in subtitles)
         self.assertTrue(len(subtitles['titulky.com']['list']) > 0, 'there should be at least one subtitle found')
+
+    def test_single_thread_search_second(self):  
+        subtitles = self.seeker.getSubtitles(providers=['premium.titulky.com'], title='True Detective', langs=['cs', 'sk'], tvshow='True Detective', season=1, episode=1)
+        self.assertIsNotNone(subtitles)
+        self.assertTrue('premium.titulky.com' in subtitles)
+        self.assertTrue(len(subtitles['premium.titulky.com']['list']) > 0, 'there should be at least one subtitle found')
 
     def test_search_simple(self):
         langs = ['cs', 'sk']
