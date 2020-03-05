@@ -126,7 +126,7 @@ cp -rp ${S}/plugin/* ${P}${PLUGINPATH}
 mkdir -p ${P}/var/lib/subssupport
 
 cd ./locale/
-languages=($(ls *.po | gsed 's/\.po//'))
+languages=($(ls *.po | sed 's/\.po//'))
 cd ..
 
 for lang in "${languages[@]}" ; do \

@@ -1,4 +1,4 @@
-AC_INIT([enigma2-plugin-extensions-subssupport], [1.5.4], [mx3ldev@gmail.com])
+AC_INIT([enigma2-plugin-extensions-subssupport], [1.6.0], [mx3ldev@gmail.com])
 
 AM_INIT_AUTOMAKE
 AC_PROG_CC
