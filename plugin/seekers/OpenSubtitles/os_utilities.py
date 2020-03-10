@@ -1,51 +1,78 @@
 # -*- coding: utf-8 -*-
 
 import xmlrpclib
-
+import json
+import urllib2,urllib,re
+import requests
 from ..utilities import languageTranslate, log
 
 __scriptname__ = 'XBMC Subtitles'
-__version__ = '3.9.18'
+__version__ = '4.0.0'
 
 BASE_URL_XMLRPC = u"http://api.opensubtitles.org/xml-rpc"
+BASE_URL = u"https://rest.opensubtitles.org/search"
 
 class OSDBServer:
-
-    def __init__(self, *args, **kwargs):
+    def xmlRPCLogin(self):
         self.server = xmlrpclib.Server(BASE_URL_XMLRPC, verbose=0)
         login = self.server.LogIn("", "", "en", "%s_v%s" % (__scriptname__.replace(" ", "_"), __version__))
         self.osdb_token = login[ "token" ]
 
     def mergesubtitles(self):
         self.subtitles_list = []
-        if(len (self.subtitles_hash_list) > 0):
+        if(len(self.subtitles_hash_list) > 0):
             for item in self.subtitles_hash_list:
                 if item["format"].find("srt") == 0 or item["format"].find("sub") == 0:
                     self.subtitles_list.append(item)
 
-        if(len (self.subtitles_list) > 0):
-            self.subtitles_list.sort(key=lambda x: [not x['sync'], x['lang_index']])
+        if(len(self.subtitles_list) > 0):
+            self.subtitles_list.sort(
+                key=lambda x: [not x['sync'], x['lang_index']])
 
-    def searchsubtitles(self, srch_string , lang1, lang2, lang3, hash_search, _hash="000000000", size="000000000"):
+    def searchsubtitles(self, title, tvshow, year, season, episode, lang1, lang2, lang3, hash_search, _hash="000000000", size="000000000"):
         msg = ""
         lang_index = 3
-        searchlist = []
+        search_parameters = {}
         self.subtitles_hash_list = []
-        self.langs_ids = [languageTranslate(lang1, 0, 2), languageTranslate(lang2, 0, 2), languageTranslate(lang3, 0, 2)]
-        language = languageTranslate(lang1, 0, 3)
+        self.langs_ids = [languageTranslate(lang1, 0, 2), languageTranslate(
+            lang2, 0, 2), languageTranslate(lang3, 0, 2)]
+        language = [languageTranslate(lang1, 0, 3)]
         if lang1 != lang2:
-            language += "," + languageTranslate(lang2, 0, 3)
+            language.append(languageTranslate(lang2, 0, 3))
         if lang3 != lang1 and lang3 != lang2:
-            language += "," + languageTranslate(lang3, 0, 3)
-        log(__name__ , "Token:[%s]" % str(self.osdb_token))
+            language.append(languageTranslate(lang3, 0, 3))
+
         try:
-            if (self.osdb_token) :
+            for lang in language:
+                search_parameters.update({'sublanguageid': lang})
+
                 if hash_search:
-                    searchlist.append({'sublanguageid':language, 'moviehash':_hash, 'moviebytesize':str(size) })
-                searchlist.append({'sublanguageid':language, 'query':srch_string })
-                search = self.server.SearchSubtitles(self.osdb_token, searchlist)
-                if search["data"]:
-                    for item in search["data"]:
+                    search_parameters.update({'moviehash': _hash})
+                    search_parameters.update({'moviebytesize': str(size)})
+                else:
+                    if not (tvshow == None or tvshow == ''):
+                        search_parameters.update({'query': tvshow})
+                    else:
+                        search_parameters.update({'query': title})
+
+                    if not (season == None or season == ''):
+                        search_parameters.update({'season': season})
+                    if not (episode == None or episode == ''):
+                        search_parameters.update({'episode': episode})
+
+                search_parameters_url = ['-'.join([key, urllib.quote_plus(str(val), '-')]) for key, val in search_parameters.iteritems()]
+                search_parameters_url =  '/'.join(search_parameters_url).lower()
+
+                url = BASE_URL + '/' + search_parameters_url
+
+                result = self.sendRequest(url)
+
+                if result:
+                    search = result.json()
+                    for item in search:
+                        log(__name__,'New subtitle found '+ item["SubFileName"])
+                        if not (year == None or year == '') and (item["MovieYear"] != year):
+                            continue
                         if item["ISO639"]:
                             lang_index = 0
                             for user_lang_id in self.langs_ids:
@@ -61,18 +88,18 @@ class OSDBServer:
                         else:
                             sync = False
                         self.subtitles_hash_list.append({
-                            'lang_index':lang_index,
-                            'filename':item["SubFileName"],
-                            'link':item["ZipDownloadLink"],
-                            'language_name':item["LanguageName"],
-                            'language_flag':flag_image,
-                            'language_id':item["SubLanguageID"],
-                            'ID':item["IDSubtitleFile"],
-                            'rating':str(int(item["SubRating"][0])),
-                            'format':item["SubFormat"],
-                            'sync':sync,
-                            'hearing_imp':int(item["SubHearingImpaired"]) != 0,
-                            'fps':item.get('MovieFPS')
+                            'lang_index': lang_index,
+                            'filename': item["SubFileName"],
+                            'link': item["ZipDownloadLink"],
+                            'language_name': item["LanguageName"],
+                            'language_flag': flag_image,
+                            'language_id': item["SubLanguageID"],
+                            'ID': item["IDSubtitleFile"],
+                            'rating': str(int(item["SubRating"][0])),
+                            'format': item["SubFormat"],
+                            'sync': sync,
+                            'hearing_imp': int(item["SubHearingImpaired"]) != 0,
+                            'fps': item.get('MovieFPS')
                         })
 
         except Exception as e:
@@ -81,10 +108,20 @@ class OSDBServer:
         self.mergesubtitles()
         return self.subtitles_list, msg
 
+    def downloadByLink(self, link, zip_subs):
+        try:
+            log(__name__,'Downloading by link %s' % (link))
+            urllib.urlretrieve(link, zip_subs)
+            return True
+        except:
+            return False
+
     def download(self, ID, dest, token):
         try:
             import zlib, base64
+            self.xmlRPCLogin()
             down_id = [ID, ]
+            log(__name__,'Downloading %s' % (dest))
             result = self.server.DownloadSubtitles(self.osdb_token, down_id)
             if result["data"]:
                 local_file = open(dest, "w" + "b")
@@ -96,3 +133,11 @@ class OSDBServer:
             return False
         except:
             return False
+
+    def sendRequest(self, url):
+        log(__name__,'Opening %s' % (url))
+        headers = requests.utils.default_headers()
+        headers.update({'User-Agent': "%s_v%s" % (__scriptname__.replace(" ", "_"), __version__)})
+        response = requests.get(url, headers=headers)
+        log(__name__,'Done')
+        return response
