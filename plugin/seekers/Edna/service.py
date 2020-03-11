@@ -111,7 +111,7 @@ def lng_short2flag(lang):
 class EdnaClient(object):
 
 	def __init__(self):
-		self.server_url = "http://www.edna.cz"
+		self.server_url = "https://www.edna.cz"
 
 	def search_show(self,title):
 		enc_title = urllib.urlencode({ "q" : title})
@@ -138,9 +138,9 @@ class EdnaClient(object):
 		res = urllib.urlopen(self.server_url + show_url + "titulky/?season=" + show_series)
 		if not res.getcode() == 200: return []
 		subtitles = []
-		html_subtitle_table = re.search("<table class=\"episodes\">.+<tbody>(.+?)</tbody>.+</table>",res.read(), re.IGNORECASE | re.DOTALL)
+		html_subtitle_table = re.search("<table(.+)?class=\"episodes\">.+<tbody([^>]+)?>(?P<data>.+?)</tbody>.+</table>",res.read(), re.IGNORECASE | re.DOTALL)
 		if html_subtitle_table == None: return []
-		for html_episode in re.findall("<tr>(.+?)</tr>", html_subtitle_table.group(1), re.IGNORECASE | re.DOTALL):
+		for html_episode in re.findall("<tr>(.+?)</tr>", html_subtitle_table.group('data'), re.IGNORECASE | re.DOTALL):
 			subtitle = {}
 			show_title_with_numbers = re.sub("<[^<]+?>", "",re.search("<h3>(.+?)</h3>", html_episode).group(1))
 			subtitle['full_title'] = show_title_with_numbers
