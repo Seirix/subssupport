@@ -2,14 +2,14 @@
 
 import HTMLParser
 import difflib
-import os, re, string, urllib, urllib2
+import os, re, string, urllib, urllib2, requests
 
 from SubsceneUtilities import geturl, get_language_info
 
 from ..utilities import log
 
 
-main_url = "http://subscene.com/"
+main_url = "https://subscene.com"
 debug_pretext = ""
 
 
@@ -138,8 +138,11 @@ def search_movie(title, year, languages, filename):
     search_string = prepare_search_string(title)
 
     log(__name__, "Search movie = %s" % search_string)
-    url = main_url + "/subtitles/title?q=" + urllib.quote_plus(search_string) + '&r=true'
-    content, response_url = geturl(url)
+    url = main_url + "/subtitles/searchbytitle"
+    query = {"query" : search_string}
+
+    res = requests.post(url, data=query)
+    content = res.content
 
     if content is not None:
         log(__name__, "Multiple movies found, searching for the right one ...")
@@ -172,8 +175,11 @@ def search_tvshow(tvshow, season, episode, languages, filename):
     search_string += " - " + seasons[int(season)] + " Season"
 
     log(__name__, "Search tvshow = %s" % search_string)
-    url = main_url + "/subtitles/title?q=" + urllib.quote_plus(search_string) + '&r=true'
-    content, response_url = geturl(url)
+    url = main_url + "/subtitles/searchbytitle"
+    query = {"query" : search_string}
+
+    res = requests.post(url, data=query)
+    content = res.content
 
     if content is not None:
         log(__name__, "Multiple tv show seasons found, searching for the right one ...")
@@ -198,12 +204,13 @@ def search_manual(searchstr, languages, filename):
 def geturl(url):
     log(__name__ , "%s Getting url:%s" % (debug_pretext, url))
     try:
-        response = urllib2.urlopen(url)
-        content = response.read()
+        res = requests.get(url)
+        content = res.content
+
         # Fix non-unicode charachters in movie titles
         strip_unicode = re.compile("([^-_a-zA-Z0-9!@#%&=,/'\";:~`\$\^\*\(\)\+\[\]\.\{\}\|\?\<\>\\]+|[^\s]+)")
         content = strip_unicode.sub('', content)
-        return_url = response.geturl()
+        return_url = res.url
     except:
         import traceback
         traceback.print_exc()
@@ -237,7 +244,7 @@ def download_subtitles (subtitles_list, pos, zip_subs, tmp_sub_dir, sub_folder, 
     downloadlink_pattern = "...<a href=\"(.+?)\" rel=\"nofollow\" onclick=\"DownloadSubtitle"
     match = re.compile(downloadlink_pattern).findall(content)
     if match:
-        downloadlink = "http://subscene.com" + match[0]
+        downloadlink = "https://subscene.com" + match[0]
         log(__name__ , "%s Downloadlink: %s " % (debug_pretext, downloadlink))
         viewstate = 0
         previouspage = 0
