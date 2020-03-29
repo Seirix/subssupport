@@ -2,7 +2,7 @@
 
 import os
 
-import urllib,re
+import urllib,re,requests
 from ..utilities import log,  languageTranslate
 
 
@@ -19,7 +19,6 @@ def search_subtitles( file_original_path, title, tvshow, year, season, episode, 
 		return [],"",""
 	elif (found_tv_shows.__len__() == 1):
 		log(__name__,"One TVShow found, auto select")
-		tvshow_url = found_tv_shows[0]['url']
 	else:
 		log(__name__,"More TVShows found, user dialog for select")
 		menu_dialog = []
@@ -29,11 +28,14 @@ def search_subtitles( file_original_path, title, tvshow, year, season, episode, 
 # 		found_tv_show_id = dialog.select(_( 610 ), menu_dialog)
 # 		if (found_tv_show_id == -1):
 # 			return [],"",""
-		tvshow_url = found_tv_shows[0]['url']
-	log(__name__,"Selected show URL: " + tvshow_url)
 
-	found_season_subtitles = cli.list_show_subtitles(tvshow_url,season)
-
+	found_season_subtitles = []
+	for tvshow in found_tv_shows:
+		log(__name__,"Selected show URL: " + tvshow['url'])
+		found_subtitles = cli.list_show_subtitles(tvshow['url'],season)
+		if len(found_subtitles) > 0:
+			found_season_subtitles += found_subtitles
+	
 	episode_subtitle_list = None
 
 	for found_season_subtitle in found_season_subtitles:
@@ -114,12 +116,14 @@ class EdnaClient(object):
 		self.server_url = "https://www.edna.cz"
 
 	def search_show(self,title):
-		enc_title = urllib.urlencode({ "q" : title})
-		res = urllib.urlopen(self.server_url + "/vyhledavani/?" + enc_title)
+		url = self.server_url + "/vyhledavani/"
+		query = {"q" : title}
+		res = requests.get(url, params=urllib.urlencode(query))
+
 		shows = []
-		if re.search("/vyhledavani/\?q=",res.geturl()):
+		if re.search("/vyhledavani/\?q=",res.request.url):
 			log(__name__,"Parsing search result")
-			res_body = re.search("<ul class=\"list serieslist\">(.+?)</ul>",res.read(),re.IGNORECASE | re.DOTALL)
+			res_body = re.search("<ul class=\"list serieslist\">(.+?)</ul>",res.content,re.IGNORECASE | re.DOTALL)
 			if res_body:
 				for row in re.findall("<li>(.+?)</li>", res_body.group(1), re.IGNORECASE | re.DOTALL):
 					show = {}
@@ -129,7 +133,7 @@ class EdnaClient(object):
 		else:
 			log(__name__,"Parsing redirect to show URL")
 			show = {}
-			show['url'] = re.search(self.server_url + "(.+)",res.geturl()).group(1)
+			show['url'] = re.search(self.server_url + "(.+)",res.request.url).group(1)
 			show['title'] = title
 			shows.append(show)
 		return shows
