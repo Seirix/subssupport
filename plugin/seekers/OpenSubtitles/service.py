@@ -35,7 +35,8 @@ def search_subtitles(file_original_path, title, tvshow, year, season, episode, s
 
 
 def download_subtitles(subtitles_list, pos, zip_subs, tmp_sub_dir, sub_folder, session_id):  # standard input
-    destination = 'zip'
+    destination = os.path.join(tmp_sub_dir, "%s.zip" %
+                               subtitles_list[pos]["ID"])
     result = OSDBServer().downloadByLink(subtitles_list[pos]["link"], zip_subs)
     if not result:
         destination = os.path.join(tmp_sub_dir, "%s.srt" %
