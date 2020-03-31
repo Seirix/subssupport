@@ -108,12 +108,24 @@ class OSDBServer:
         self.mergesubtitles()
         return self.subtitles_list, msg
 
-    def downloadByLink(self, link, zip_subs):
+    def downloadByLink(self, link, dest):
         try:
+            from StringIO import StringIO
+            import zipfile
             log(__name__,'Downloading by link %s' % (link))
-            urllib.urlretrieve(link, zip_subs)
-            return True
-        except:
+            res = urllib2.urlopen(link)
+            subtitleZipFile = zipfile.ZipFile(StringIO(res.read()))
+            subExtensions = ('.srt')
+            for oneFile in subtitleZipFile.namelist():
+                if oneFile.endswith(subExtensions):
+                    data = subtitleZipFile.open(oneFile).read()
+                    local_file = open(dest, 'wb')
+                    local_file.write(data)
+                    local_file.close()
+                    return True
+            return False
+        except Exception as e:
+            log(__name__,'Error downloading by link %s' % (e.message))
             return False
 
     def download(self, ID, dest, token):
@@ -131,7 +143,8 @@ class OSDBServer:
                 local_file.close()
                 return True
             return False
-        except:
+        except Exception as e:
+            log(__name__,'Error downloading %s' % (e.message))
             return False
 
     def sendRequest(self, url):
